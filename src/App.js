@@ -1,25 +1,46 @@
-import logo from './logo.svg';
-import './App.css';
+import {Routes, Route, Outlet} from "react-router-dom";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import { ColorModeContext, useMode } from "./theme";
+import LoginForm from "./auth/index";
+import Dashboard from "./scenes/dashboard";
+import Topbar from "./scenes/global/Topbar";
+import Sidebar from "./scenes/global/Sidebar";
+import ReportView from "./scenes/reportview";
+
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+  const [theme, colorMode] = useMode();
+  const PrivateRoute=()=>{
+    return(
+      <>
+      <Sidebar/>
+      <main className="content">
+        <Topbar/>
+          <Outlet />
+        </main>
+      </>
+    );
+  };
 
+
+  return(
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <div className="app">
+        <Routes>
+          <Route path="/" element={<LoginForm/>}/>
+          <Route path="/" element={<PrivateRoute/>}>
+            <Route path="/dashboard" element={<Dashboard/>}/>
+            <Route path="/reportview" element={<ReportView/>}/>
+          </Route>
+
+        </Routes>
+        </div>
+      </ThemeProvider>
+    </ColorModeContext.Provider>
+  );
+  
+
+}
 export default App;
