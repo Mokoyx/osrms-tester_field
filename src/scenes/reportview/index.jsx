@@ -1,82 +1,77 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from '@mui/material/styles';
-import { DataGrid } from '@mui/x-data-grid';
 import { getDatabase, ref, onValue } from "firebase/database";
-import { stewardship, pgts, ministerial_spouses } from '../../data/sampleData';
-import Header from '../../components/Header';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+function DashboardTables() {
+  const [data, setData] = useState({
+    pgts: {},
+    stewardship: {},
+    ministerial_spouses: {}
+  });
 
-const ReportView = () => {
-  const theme = useTheme();
-  const db = getDatabase();
-  const [firebaseData, setFirebaseData] = useState({});
-  const [loading, setLoading] = useState(true);
-
-  // Fetch data from Firebase Realtime Database
   useEffect(() => {
+    const db = getDatabase();
     const dbRef = ref(db, 'report');
-    onValue(dbRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      console.log("Firebase Data:", data); // Log fetched data
-      setFirebaseData(data);
-      setLoading(false); // Set loading to false once data is fetched
-    });
-  }, [db]);
-  
 
-  // Prepare columns for DataGrid
-  const columns = [
-    { field: 'id', headerName:'INPUT DATA',width:200 },
-    { field: 'label', headerName: 'Label', width: 200 },
-    { field: 'value', headerName: 'Value', width: 200 },
-  ];
+    // Subscribe to Realtime Database and listen for updates
+    const unsubscribe = onValue(dbRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const reportData = snapshot.val();
+        // Assume latest data is what we need or process to find latest
+        const latestKey = Object.keys(reportData).pop();
+        const latestData = reportData[latestKey];
 
-  // Function to render a DataGrid for a department
-  const renderDepartmentGrid = (departmentData) => {
-    const rows = [];
-    departmentData.forEach(({ id, label }) => {
-      const value = firebaseData && firebaseData['report'] && firebaseData['report']['-M1234567890abcd'] && firebaseData['report']['-M1234567890abcd'][id] ? firebaseData['report']['-M1234567890abcd'][id] : '';
-      rows.push({ id, label, value });
+        setData({
+          pgts: latestData.pgts || {},
+          stewardship: latestData.stewardship || {},
+          ministerial_spouses: latestData.ministerial_spouses || {}
+        });
+      } else {
+        console.log("No data available");
+      }
     });
 
+    // Clean up the subscription on component unmount
+    return () => unsubscribe();
+  }, []);
+
+  // Component to render data in a table
+  function DataTable({ data, title }) {
     return (
-      <div style={{ height: 400, width: '100%', marginBottom: '20px' }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          pageSize={5}
-          checkboxSelection
-        />
-      </div>
+      <TableContainer component={Paper} sx={{ margin: '20px', width: 'auto' }}>
+        <Table sx={{ minWidth: 300 }} aria-label={title}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Field</TableCell>
+              <TableCell align="left">Value</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Object.entries(data).map(([key, value]) => (
+              <TableRow key={key}>
+                <TableCell component="th" scope="row">
+                  {key} {/* You can map IDs to labels here if needed */}
+                </TableCell>
+                <TableCell align="left">{value}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     );
-  };
+  }
 
   return (
-    <div className="ReportView" style={{ color: theme.palette.primary.main, marginRight: 40, marginLeft: 20 }}>
-      <Header
-        title="ReportView"
-        subtitle="Create a New Department Report"
-      />
-      {loading ? ( // Display loading indicator while fetching data
-        <div>Loading...</div>
-      ) : (
-        <>
-          {/* Render DataGrid for each department */}
-          <div>
-            <h2>Stewardship Department</h2>
-            {renderDepartmentGrid(stewardship)}
-          </div>
-          <div>
-            <h2>Planned Giving and Trust Services Department</h2>
-            {renderDepartmentGrid(pgts)}
-          </div>
-          <div>
-            <h2>Ministerial Spouses Association</h2>
-            {renderDepartmentGrid(ministerial_spouses)}
-          </div>
-        </>
-      )}
+    <div style={{ marginLeft:'20px' }}>
+      <h2>Planned Giving and Trust Services</h2>
+      <DataTable data={data.pgts} title="Planned Giving and Trust Services" />
+
+      <h2>Stewardship</h2>
+      <DataTable data={data.stewardship} title="Stewardship" />
+
+      <h2>Ministerial Spouses</h2>
+      <DataTable data={data.ministerial_spouses} title="Ministerial Spouses" />
     </div>
   );
-};
+}
 
-export default ReportView;
+export default DashboardTables;
